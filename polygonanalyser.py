@@ -10,6 +10,7 @@ all = "all_apparatus.txt"
 yb = "yellow_black.txt"
 
 def load_polygon_corners(file):
+    # run through the file and pick out when the left button is pressed
     xs, ys = [], []
     with open(mouse_movements_folder / file) as doc: 
         for line in doc:

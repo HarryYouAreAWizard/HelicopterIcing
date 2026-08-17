@@ -1,7 +1,8 @@
 from pynput import mouse
 
 def on_move(x, y):
-    print(f"Mouse moved to position: ({x}, {y})")
+    # print(f"Mouse moved to position: ({x}, {y})")
+    pass
 
 def on_click(x, y, button, pressed):
     action = "Pressed" if pressed else "Released"
@@ -13,8 +14,9 @@ def on_click(x, y, button, pressed):
         return False
 
 def on_scroll(x, y, dx, dy):
-    direction = "Down/Right" if (dx < 0 or dy < 0) else "Up/Left"
-    print(f"Scrolled {direction} at ({x}, {y})")
+    pass
+    # direction = "Down/Right" if (dx < 0 or dy < 0) else "Up/Left"
+    # print(f"Scrolled {direction} at ({x}, {y})")
 
 # This starts a background thread to listen for mouse events
 with mouse.Listener(
