@@ -2,11 +2,13 @@
 
 
 
+from os import getcwd
 import numpy as np
 import cv2
 from pathlib import Path
 
-polygon_dir = Path("..") / "polygons"
+# polygon_dir = Path("..") / "polygons"
+polygon_dir = Path(getcwd()) / "polygons"
 
 
 # define method for determining whether a point is inside a polygon
@@ -81,7 +83,7 @@ def draw_polygon(polygon, frame):
     cv2.line(frame, polygon[-1], polygon[0], (255, 0, 0), 5)
 
 def load_fitted_polygon(frame_shape):
-    from mask_creation import fit_polygon_all_wing, fit_polygon_yellow_black_wing
+    # from mask_creation import fit_polygon_all_wing, fit_polygon_yellow_black_wing
     # load polygons
     xs_all = np.load(polygon_dir / "xs_all.npy")
     ys_all = np.load(polygon_dir / "ys_all.npy")
@@ -109,7 +111,7 @@ def create_mask(polygon, frame_shape):
     return mask
 
 
-def get_mask(videocapture, plot_mask=False):
+def get_mask(videocapture, plot_mask=False, figure_dir=None):
 
     # set first frame and get the shape
     videocapture.set(cv2.CAP_PROP_POS_FRAMES, 0) 
@@ -127,6 +129,7 @@ def get_mask(videocapture, plot_mask=False):
     if plot_mask:
         # plot the masked image along with the drawing of the polygon
         first_frame_masked = first_frame * mask[:, :, None]
-        cv2.imwrite(Path("..") /"figures" / "image.png", first_frame_masked)
+        # cv2.imwrite(Path("..") /"figures" / "image.png", first_frame_masked)
+        cv2.imwrite(figure_dir / "mask_example.png", first_frame_masked)
 
     return mask

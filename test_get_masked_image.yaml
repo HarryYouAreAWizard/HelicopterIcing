@@ -1,0 +1,27 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: test-get-masked-image
+spec:
+  template:
+    spec:
+      containers:
+      - name: test-get-masked-image
+        # image: "test-get-masked-image"
+        # image: python:3.11-slim
+        # image: pytorch/pytorch
+        image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+        # workingDir: $HOME/HelicopterIcing/k8helloworld
+        workingDir: /storage
+        # command: ["pwd"]
+        command: ["sh", "test_get_masked_image/instructions.sh"]
+        volumeMounts:
+        - name: test-get-masked-image
+          mountPath: /storage
+      volumes:
+      - name: test-get-masked-image
+        persistentVolumeClaim:
+          claimName: storage
+      restartPolicy: OnFailure
+      # imagePullPolicy: Never
+  backoffLimit: 0
