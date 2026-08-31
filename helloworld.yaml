@@ -1,0 +1,22 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: helloworld
+spec:
+  template:
+    spec:
+      containers:
+      - name: helloworld
+        image: "tensorflow/tensorflow:1.13.1-gpu-py3" # I will just keep the same image
+        # workingDir: $HOME/HelicopterIcing/k8helloworld
+        workingDir: /storage
+        command: ["sh", "k8helloworld/helloworld.sh"]
+        volumeMounts:
+        - name: helloworld
+          mountPath: /storage
+      volumes:
+      - name: helloworld
+        persistentVolumeClaim:
+          claimName: storage
+      restartPolicy: OnFailure
+  backoffLimit: 0
