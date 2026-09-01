@@ -3,9 +3,18 @@
 
 
 __pycache__*/
-data*/
 .venv*/
-figures*/
+hi/data*/
+hi/figures*/
 Dockerfile
 get-docker.sh
 my-image.tar.gz
+
+graveyard*/
+
+test_get_masked_image*/
+run_test_get_masked_image.sh
+test_get_masked_image.yaml
+
+k8helloworld*/
+k8helloworld.sh
