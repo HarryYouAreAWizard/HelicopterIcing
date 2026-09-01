@@ -3,7 +3,7 @@
 
 import cv2
 import video
-
+import numpy as np
 
 def icenessindex(normalized_filtered_frame):
     # H_lower, H_upper = 0, 3
@@ -27,13 +27,16 @@ def icenessindex(normalized_filtered_frame):
 
 
 # get indicies for each period
-def get_ice_indices(videocapture:cv2.VideoCapture, mask)->tuple:
+def get_ice_indices(videocapture:cv2.VideoCapture, mask:np.ndarray, end_idx=None)->tuple:
     # open video at beginning 
     i = 0
+        
     videocapture.set(cv2.CAP_PROP_POS_FRAMES, i) # search up the frame
     num_frames = video.get_num_frames(videocapture)
-    ret, frame = videocapture.read()
 
+    if end_idx is None:
+        end_idx = num_frames
+        
     frame_indicies_ice = []
     frame_indicies_noice = []
 
@@ -55,8 +58,12 @@ def get_ice_indices(videocapture:cv2.VideoCapture, mask)->tuple:
         else:
             frame_indicies_noice.append(i)
 
-        i+=1
 
         print(f"{i} / {num_frames}", end="\r", flush=True)
+
+        i+=1
+        if i == end_idx:
+            break
+
     return frame_indicies_ice, frame_indicies_noice
 

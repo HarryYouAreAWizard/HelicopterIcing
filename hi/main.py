@@ -15,7 +15,7 @@ import case_seperation
 
 figure_dir = Path(os.getcwd()) / "figures"
 data_dir = Path(os.getcwd()) / "video-data"
-case_videos_dir = Path(os.getcwd()) / "case-videos"
+case_videos_dir = Path(os.getcwd()) / "case_videos"
 
 video_filename = "Video_Test_F2787_125743_01_VIDCKPT_sec.mpg"
 
@@ -54,11 +54,16 @@ def main()->None:
     print(f"Saved image at {figure_dir}/image.png")
 
     
-    frame_indicies_ice, frame_indicies_noice = case_seperation.get_ice_indices(cap, mask)
+    print(f"\nFinding indicies...")
+    frame_indicies_ice, frame_indicies_noice = case_seperation.get_ice_indices(cap, mask, end_idx=None)
     frame_indicies_ice = np.array(frame_indicies_ice)
     frame_indicies_noice = np.array(frame_indicies_noice)
 
+    print(f"\nSaving indicies...")
     np.save(case_videos_dir / "frame_indicies_ice.npy", frame_indicies_ice)
     np.save(case_videos_dir / "frame_indicies_noice.npy", frame_indicies_noice)
+
+    print(f"{np.shape(frame_indicies_ice) = }")
+    print(f"{np.shape(frame_indicies_noice) = }")
 
 main()
