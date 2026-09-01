@@ -1,25 +1,24 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: test-get-masked-image
+  name: helicoptericing
 spec:
   template:
     spec:
       containers:
-      - name: test-get-masked-image
+      - name: helicoptericing
         # image: "test-get-masked-image"
         # image: python:3.11-slim
         # image: pytorch/pytorch
         image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
-        # workingDir: $HOME/HelicopterIcing/k8helloworld
         workingDir: /storage
-        # command: ["pwd"]
-        command: ["sh", "test_get_masked_image/instructions.sh"]
+        # command: ["ls"]
+        command: ["sh", "instructions.sh"]
         volumeMounts:
-        - name: test-get-masked-image
+        - name: storage
           mountPath: /storage
       volumes:
-      - name: test-get-masked-image
+      - name: storage
         persistentVolumeClaim:
           claimName: storage
       restartPolicy: OnFailure

@@ -6,11 +6,15 @@ __pycache__*/
 .venv*/
 hi/data*/
 hi/figures*/
+hi/polygons*/
+hi/casevideos*/
+
 Dockerfile
 get-docker.sh
 my-image.tar.gz
 
 graveyard*/
+
 
 test_get_masked_image*/
 run_test_get_masked_image.sh
