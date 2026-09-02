@@ -15,4 +15,8 @@ frink run -f on_springfield.yaml
 
 
 # copy the figures back to my local machine
-# scp -r springfield:~/figures /home/noah/HelicopterIcing/hi
+
+scp -r springfield:~/case_videos /home/noah/HelicopterIcing/hi/
+scp -r springfield:~/figures /home/noah/HelicopterIcing/hi
+scp -r springfield:~/segnet_output /home/noah/HelicopterIcing/hi/
+

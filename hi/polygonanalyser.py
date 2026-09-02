@@ -32,6 +32,7 @@ def load_polygon_corners(file):
 xs_all, ys_all = load_polygon_corners(all)
 xs_yb, ys_yb = load_polygon_corners(yb)
 
+
 np.save(polygons_dir / "xs_all", xs_all)
 np.save(polygons_dir / "ys_all", ys_all)
 np.save(polygons_dir / "xs_yb", xs_yb)

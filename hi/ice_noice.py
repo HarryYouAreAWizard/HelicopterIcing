@@ -5,13 +5,12 @@ import cv2
 import video
 import numpy as np
 
-def icenessindex(normalized_filtered_frame):
+def icenessindex(normalized_filtered_frame, threshold=0.095):
     # H_lower, H_upper = 0, 3
     # S_lower, S_upper = 0, 3.0  
     # V_lower, V_upper = 0, 7.75
     # isice = (H < H_upper and S < S_upper and V < V_upper)
 
-    ICE_threshold = 0.095
     # change representation
     HSV = cv2.cvtColor(normalized_filtered_frame, cv2.COLOR_BGR2HSV)
 
@@ -21,7 +20,7 @@ def icenessindex(normalized_filtered_frame):
 
     # iceness = 1/(H + S + V)
     iceness = 1/(S + V)
-    isice = iceness>ICE_threshold
+    isice = iceness>threshold
     # return isice, iceness
     return iceness, isice, H, S, V
 

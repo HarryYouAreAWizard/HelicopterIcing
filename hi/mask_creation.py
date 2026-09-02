@@ -82,7 +82,7 @@ def draw_polygon(polygon, frame):
         previous_point = point
     cv2.line(frame, polygon[-1], polygon[0], (255, 0, 0), 5)
 
-def load_fitted_polygon(frame_shape):
+def load_fitted_polygon(frame_shape, which_polygon="yb"):
     # from mask_creation import fit_polygon_all_wing, fit_polygon_yellow_black_wing
     # load polygons
     xs_all = np.load(polygon_dir / "xs_all.npy")
@@ -94,11 +94,12 @@ def load_fitted_polygon(frame_shape):
     xs_all, ys_all = fit_polygon_all_wing(xs_all, ys_all, frame_shape)
     xs_yb, ys_yb = fit_polygon_yellow_black_wing(xs_yb, ys_yb, frame_shape)
 
-    # convert polygons to list of points
-    polygon = list(zip(xs_all, ys_all))
-    polygon = list(zip(xs_yb, ys_yb))
+    polygons = {
+        "yb": list(zip(xs_yb, ys_yb)),
+        "all": list(zip(xs_all, ys_all))
+    }
 
-    return polygon
+    return polygons[which_polygon]
 
 def create_mask(polygon, frame_shape):
     # create a mask using the polygon
@@ -111,7 +112,7 @@ def create_mask(polygon, frame_shape):
     return mask
 
 
-def get_mask(videocapture, plot_mask=False, figure_dir=None):
+def get_mask(videocapture, plot_mask=False, figure_dir=None, which_polygon="yb"):
 
     # set first frame and get the shape
     videocapture.set(cv2.CAP_PROP_POS_FRAMES, 0) 
@@ -122,7 +123,7 @@ def get_mask(videocapture, plot_mask=False, figure_dir=None):
     frame_shape = first_frame.shape
 
     # load the fitted polygon
-    polygon = load_fitted_polygon(frame_shape)
+    polygon = load_fitted_polygon(frame_shape, which_polygon=which_polygon)
 
     # draw the polygon on the first frame. Visualized as to help fitting the polygon
     draw_polygon(polygon, first_frame)
