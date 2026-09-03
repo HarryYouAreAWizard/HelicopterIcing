@@ -112,6 +112,13 @@ def create_mask(polygon, frame_shape):
     return mask
 
 
+def reduced_frame_polygon(frame):
+    polygon = load_fitted_polygon(frame.shape)
+    polygon = np.array(polygon)
+    polygon[:, 0] -= 325
+    polygon[:, 1] -= 190
+    return polygon
+
 def get_mask(videocapture, plot_mask=False, figure_dir=None, which_polygon="yb"):
 
     # set first frame and get the shape

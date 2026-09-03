@@ -18,5 +18,7 @@ frink run -f on_springfield.yaml
 
 scp -r springfield:~/case_videos /home/noah/HelicopterIcing/hi/
 scp -r springfield:~/figures /home/noah/HelicopterIcing/hi
-scp -r springfield:~/segnet_output /home/noah/HelicopterIcing/hi/
+# scp -r springfield:~/scan_output /home/noah/HelicopterIcing/hi
+
+# scp -r springfield:~/segnet_output /home/noah/HelicopterIcing/hi/
 

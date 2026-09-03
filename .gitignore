@@ -5,9 +5,14 @@
 __pycache__*/
 .venv*/
 hi/data*/
+hi/video-data
 hi/figures*/
 hi/polygons*/
 hi/casevideos*/
+hi/scan_output*/
+hi/reduced_video_data*/
+hi/segnet_output*/
+
 
 Dockerfile
 get-docker.sh

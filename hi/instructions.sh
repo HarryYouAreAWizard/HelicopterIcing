@@ -8,7 +8,7 @@
 
 # install dependencies
 echo Installing dependencies
-pip install --quiet numpy matplotlib opencv-python-headless 
+pip install --quiet numpy matplotlib opencv-python-headless scikit-learn
 
 # echo following files exist
 # ls -a

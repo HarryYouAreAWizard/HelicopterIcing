@@ -92,3 +92,35 @@ def load_and_show(videocapture:cv2.VideoCapture)->None:
     cv2.destroyAllWindows()
 
     
+def write_lower_right_corner_reduced(videocapture:cv2.VideoCapture, output_path):
+
+    
+    ret, frame = videocapture.read()
+    height_original, width_original, channels = frame.shape
+    height_new = height_original //2
+    width_new = width_original //2
+
+    num_frames = get_num_frames(videocapture)
+
+    out = cv2.VideoWriter(output_path,
+                          cv2.VideoWriter_fourcc(*'XVID'), 
+                          20, (width_new, height_new))
+
+    set_frame(videocapture, 0)
+    i = 0
+    while videocapture.isOpened():
+        ret, frame = videocapture.read()
+        if not ret: 
+            break
+
+        frame  = frame[-height_new:, -width_new:, :]
+        out.write(frame)
+
+        i += 1
+        if i%1000==0: print(f"{i} / {num_frames}")
+        if i == num_frames:
+            break
+
+    out.release()
+    cv2.destroyAllWindows()
+    
