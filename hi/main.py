@@ -9,6 +9,9 @@ import os
 
 from pathlib import Path
 
+from video import filter_frame, change_color_representation, extract_pixels_in_mask, normalize_brightness, set_frame
+from mask_creation import reduced_frame_polygon, create_mask
+
 import mask_creation
 import video
 from ice_noice import get_video_frame_averaged_HSV, silhouette_score_from_mean_HSVs
@@ -53,27 +56,118 @@ def run_silhouette_score(skip):
     return thresholds, silhouette_scores
 
 
+
 def main()->None:
-    # # load the video
-    # cap = cv2.VideoCapture(data_dir / video_filename)
-    # # load the mask
-    # mask = mask_creation.get_mask(cap, plot_mask=True, figure_dir=figure_dir)
-    # if isinstance(mask, int):
-    #     print("mask creation failed")
-    #     return 
+    # load the video
+    red = cv2.VideoCapture(reduced_video_dir / video_filename)
+    # load the mask
+    ret, frame = red.read()
+    if not ret:
+        print("Error loading video")
+    polygon = reduced_frame_polygon(frame)
+    red_mask = create_mask(polygon, frame.shape)
+
+    try:
+        HSV = np.load(scan_output_dir / "HSV.npy")
+        RGB = np.load(scan_output_dir / "RGB.npy")
+    except Exception:
+        HSV, RGB = get_video_frame_averaged_HSV(red, red_mask, normalize=False)
+        np.save(scan_output_dir / "HSV.npy", HSV)
+        np.save(scan_output_dir / "RGB.npy", RGB)
+
+    skip = 1000
+    center = 50
+    half_width = center - 0.05
+    thresholds = np.linspace(center-half_width, center+half_width, 10000)
+    np.save(scan_output_dir / "thresholds.npy", thresholds)
+    HSV = HSV[::skip, :]
+    RGB = RGB[::skip, :]
+
+    H = HSV[:, 0]
+    S = HSV[:, 1]
+    V = HSV[:, 2]
+    R = RGB[:, 0]
+    G = RGB[:, 1]
+    B = RGB[:, 2]
+
+    HSV_variations = {
+        "HSV": H+S+V,
+        "HS": H+S,
+        "HV": H+V,
+        "SV": S+V,
+        "H": H,
+        "S": S,
+        "V": V,
+    }
+    RGB_variations = {
+        "RGB": R+G+B,
+        "RG": R+G,
+        "RB": R+B,
+        "GB": G+B,
+        "R": R,
+        "G": G,
+        "B": B,
+    }
+
+    for variation in HSV_variations.keys():
+        iceness = HSV_variations[variation]
+        S = silhouette_score_from_mean_HSVs(HSV, iceness, thresholds, skip=10)
+        np.save(scan_output_dir / f"silhouette score {variation}.npy", S)
+    
+    for variation in RGB_variations.keys():
+        iceness = RGB_variations[variation]
+        S = silhouette_score_from_mean_HSVs(RGB, iceness, thresholds, skip=10)
+        np.save(scan_output_dir / f"silhouette score {variation}.npy", S)
+    
+
+    # print("Finding silhouette scores...")
+    # thresholds, silhouette_scores = run_silhouette_score(skip=5)
+
+    # fig, ax=plt.subplots()
+    # # ax.plot(thresholds, silhouette_scores)
+    # ax.set_xlabel("Threshold")
+    # ax.set_ylabel("Silhouette score")
+    # ax.set_title("Optimizing icing threshold")
+    # fig.tight_layout()
+    # fig.savefig(figure_dir / "thresholds-silhouette.png")
 
 
-    print("Finding silhouette scores...")
-    thresholds, silhouette_scores = run_silhouette_score(skip=5)
 
-    fig, ax=plt.subplots()
-    ax.plot(thresholds, silhouette_scores)
-    ax.set_xlabel("Threshold")
-    ax.set_ylabel("Silhouette score")
-    ax.set_title("Optimizing icing threshold")
-    fig.tight_layout()
-    fig.savefig(figure_dir / "thresholds-silhouette.png")
 
+
+    # num_bins = 50
+    # while red.isOpened():
+    #     fig, axs=plt.subplots(2, 1) 
+    #     ret, BGR = red.read()
+    #     if not ret: break
+    #     BGR = filter_frame(BGR, red_mask)
+
+    #     LAB = change_color_representation(BGR, cv2.COLOR_BGR2LAB)
+    #     pixels = extract_pixels_in_mask(LAB, red_mask)[:, 0]
+    #     counts, bins = np.histogram(pixels, bins=num_bins)
+    #     axs[0].plot(bins[:-1], counts)
+
+    #     BGR = normalize_brightness(BGR, red_mask)
+
+    #     LAB = change_color_representation(BGR, cv2.COLOR_BGR2LAB)
+    #     pixels = extract_pixels_in_mask(LAB, red_mask)[:, 0]
+    #     counts, bins = np.histogram(pixels, bins=num_bins)
+    #     axs[1].plot(bins[:-1], counts)
+
+    #     fig.savefig(figure_dir / "histogram.png")
+
+    #     cv2.imshow(".", BGR)
+    #     plt.close()
+
+    #     key = cv2.waitKey(10)
+    #     if key == ord("q"):
+    #         break
+    #     if key == ord("s"):
+    #         i = input("frame index: ")
+    #         i = int(i)
+    #         set_frame(red, i)
+
+    # cv2.destroyAllWindows()
 
 
 main()
