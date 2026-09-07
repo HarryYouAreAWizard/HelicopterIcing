@@ -58,6 +58,15 @@ def run_silhouette_score(skip):
 
 
 def main()->None:
+
+    cap = cv2.VideoCapture(data_dir / video_filename)
+    cap_mask = mask_creation.get_mask(cap)
+
+    HSV, RGB = get_video_frame_averaged_HSV(cap, cap_mask, normalize=False)
+    np.save(scan_output_dir / "HSV full cap.npy", HSV)
+    np.save(scan_output_dir / "RGB full cap.npy", RGB)
+
+    return 
     # load the video
     red = cv2.VideoCapture(reduced_video_dir / video_filename)
     # load the mask
