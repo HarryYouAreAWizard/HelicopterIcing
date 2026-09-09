@@ -50,7 +50,7 @@ def isInside(arr, x, y):
 
 # fit the polygons to match position of wing in frame
 # made manually
-def fit_polygon_all_wing(xs, ys, frame_shape):
+def fit_polygon_all(xs, ys, frame_shape):
     # shift polygons to upper right corner
     xs -= np.min(xs)
     ys -= np.min(ys)
@@ -62,7 +62,7 @@ def fit_polygon_all_wing(xs, ys, frame_shape):
     ys += y_move 
     return xs, ys
 
-def fit_polygon_yellow_black_wing(xs, ys, frame_shape):
+def fit_polygon_yellow_black(xs, ys, frame_shape):
     # shift polygons to upper right corner
     xs -= np.min(xs)
     ys -= np.min(ys)
@@ -74,30 +74,85 @@ def fit_polygon_yellow_black_wing(xs, ys, frame_shape):
     ys += y_move 
     return xs, ys
 
+def fit_polygon_yellow(xs, ys, frame_shape):
+    xs -= xs.min()
+    ys -= ys.min()
+
+    x_move = frame_shape[1]//2 + 110
+    y_move = frame_shape[0]//2 + 95
+    xs += x_move
+    ys += y_move
+    
+    return xs, ys
+
+def fit_polygon_black(xs, ys, frame_shape):
+    xs -= xs.min()
+    ys -= ys.min()
+
+    x_move = frame_shape[1]//2 + 123
+    y_move = frame_shape[0]//2 + 119
+    xs += x_move
+    ys += y_move
+    
+    return xs, ys
+
+def fit_polygon_pipe(xs, ys, frame_shape):
+    xs -= xs.min()
+    ys -= ys.min()
+    x_move = frame_shape[1]//2 + 75
+    y_move = frame_shape[0]//2 + 75
+    xs += x_move
+    ys += y_move
+    
+    return xs, ys
+
+def fit_polygon_pipe_small(xs, ys, frame_shape):
+    xs -= xs.min()
+    ys -= ys.min()
+    x_move = frame_shape[1]//2 + 80
+    y_move = frame_shape[0]//2 + 80
+    xs += x_move
+    ys += y_move
+    
+    return xs, ys
 
 def draw_polygon(polygon, frame):
     previous_point = polygon[0]
     for point in polygon[1:]:
         cv2.line(frame, previous_point, point, (255, 0, 0), 5)
         previous_point = point
-    cv2.line(frame, polygon[-1], polygon[0], (255, 0, 0), 5)
+    cv2.line(frame, polygon[-1], polygon[0], (255, 0, 0), 1)
 
-def load_fitted_polygon(frame_shape, which_polygon="yb"):
+def load_fitted_polygon(frame_shape, which_polygon):
     # from mask_creation import fit_polygon_all_wing, fit_polygon_yellow_black_wing
     # load polygons
-    xs_all = np.load(polygon_dir / "xs_all.npy")
-    ys_all = np.load(polygon_dir / "ys_all.npy")
-    xs_yb = np.load(polygon_dir / "xs_yb.npy")
-    ys_yb = np.load(polygon_dir / "ys_yb.npy")
-
-    # fit the polygons to the frame
-    xs_all, ys_all = fit_polygon_all_wing(xs_all, ys_all, frame_shape)
-    xs_yb, ys_yb = fit_polygon_yellow_black_wing(xs_yb, ys_yb, frame_shape)
-
-    polygons = {
-        "yb": list(zip(xs_yb, ys_yb)),
-        "all": list(zip(xs_all, ys_all))
+    fitters = {
+        "all": fit_polygon_all,
+        "yellow_black": fit_polygon_yellow_black,
+        "yellow": fit_polygon_yellow,
+        "black": fit_polygon_black,
+        "pipe": fit_polygon_pipe,
+        "pipe_small": fit_polygon_pipe_small
     }
+    polygons = {}
+    for key in fitters:
+        xs = np.load(polygon_dir / f"xs_{key}.npy")
+        ys = np.load(polygon_dir / f"ys_{key}.npy")
+        xs, ys = fitters[key](xs, ys, frame_shape)
+        polygons[key] = list(zip(xs, ys))
+    # xs_all = np.load(polygon_dir / "xs_all.npy")
+    # ys_all = np.load(polygon_dir / "ys_all.npy")
+    # xs_yb = np.load(polygon_dir / "xs_yb.npy")
+    # ys_yb = np.load(polygon_dir / "ys_yb.npy")
+
+    # # fit the polygons to the frame
+    # xs_all, ys_all = fit_polygon_all_wing(xs_all, ys_all, frame_shape)
+    # xs_yb, ys_yb = fit_polygon_yellow_black_wing(xs_yb, ys_yb, frame_shape)
+
+    # polygons = {
+    #     "yb": list(zip(xs_yb, ys_yb)),
+    #     "all": list(zip(xs_all, ys_all))
+    # }
 
     return polygons[which_polygon]
 
@@ -113,13 +168,13 @@ def create_mask(polygon, frame_shape):
 
 
 def reduced_frame_polygon(frame):
-    polygon = load_fitted_polygon(frame.shape)
+    polygon = load_fitted_polygon(frame.shape, "yellow_black")
     polygon = np.array(polygon)
     polygon[:, 0] -= 325
     polygon[:, 1] -= 190
     return polygon
 
-def get_mask(videocapture, plot_mask=False, figure_dir=None, which_polygon="yb"):
+def get_mask(videocapture, which_polygon, plot_mask=False, figure_dir=None):
 
     # set first frame and get the shape
     videocapture.set(cv2.CAP_PROP_POS_FRAMES, 0) 
@@ -133,14 +188,16 @@ def get_mask(videocapture, plot_mask=False, figure_dir=None, which_polygon="yb")
     polygon = load_fitted_polygon(frame_shape, which_polygon=which_polygon)
 
     # draw the polygon on the first frame. Visualized as to help fitting the polygon
-    draw_polygon(polygon, first_frame)
+    # draw_polygon(polygon, first_frame)
 
     mask = create_mask(polygon, frame_shape)
 
     if plot_mask:
         # plot the masked image along with the drawing of the polygon
-        first_frame_masked = first_frame * mask[:, :, None]
+        first_frame = first_frame * mask[:, :, None]
         # cv2.imwrite(Path("..") /"figures" / "image.png", first_frame_masked)
-        cv2.imwrite(figure_dir / "mask_example.png", first_frame_masked)
+        cv2.imwrite(figure_dir / "mask_example.png", first_frame)
 
     return mask
+
+

@@ -94,14 +94,14 @@ results = {
 }
 
 # this one matches with the original video
-# results = {
-#     "start1": 5500,
-#     "end1": 20500,
-#     "start2": 30120,
-#     "end2": 38120,
-#     "start3": 51520,
-#     "end3": 68520,
-# }
+results = {
+    "start1": 5500,
+    "end1": 20500,
+    "start2": 30120,
+    "end2": 38120,
+    "start3": 51520,
+    "end3": 68520,
+}
 
 def plot_trajectories():
     HSV = np.load(scan_output_dir / "HSV.npy")
@@ -149,4 +149,4 @@ def plot_trajectories():
     fig.savefig(figure_dir / "3D manual.png")
     plt.show()
 
-plot_trajectories()
+# plot_trajectories()

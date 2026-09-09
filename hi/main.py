@@ -14,8 +14,7 @@ from mask_creation import reduced_frame_polygon, create_mask
 
 import mask_creation
 import video
-from ice_noice import get_video_frame_averaged_HSV, silhouette_score_from_mean_HSVs
-
+from ice_noice import get_video_frame_averaged_HSV, get_video_frame_FULL_HSV, silhouette_score_from_mean_HSVs 
 
 figure_dir          = Path(os.getcwd()) / "figures"
 data_dir            = Path(os.getcwd()) / "video-data"
@@ -29,7 +28,7 @@ reduced_video_dir   = Path(os.getcwd()) / "reduced_video_data"
 video_filename = "Video_Test_F2787_125743_01_VIDCKPT_sec.mpg"
 
 # to avoid spam, even though the video works fine
-os.environ["FFMPEG_LOG_LEVEL"] = "quiet"
+# os.environ["FFMPEG_LOG_LEVEL"] = "quiet"
 
 
 
@@ -60,31 +59,110 @@ def run_silhouette_score(skip):
 def main()->None:
 
     cap = cv2.VideoCapture(data_dir / video_filename)
-    cap_mask = mask_creation.get_mask(cap)
+    pipe_mask = mask_creation.get_mask(cap, "pipe_small", plot_mask=True, figure_dir=figure_dir)
 
-    HSV, RGB = get_video_frame_averaged_HSV(cap, cap_mask, normalize=False)
-    np.save(scan_output_dir / "HSV full cap.npy", HSV)
-    np.save(scan_output_dir / "RGB full cap.npy", RGB)
+   
+    start = 10000
+    end = 40000
+    i = start
+    set_frame(cap, i)
+    under_history = []
+    above_history = []
+    while cap.isOpened():
+        
+        ret, frame = cap.read()
+        if not ret: break
+
+        cv2.imshow("Original", frame)
+        frame = filter_frame(frame, pipe_mask)
+        gray = change_color_representation(frame, cv2.COLOR_BGR2GRAY)
+
+
+        nonzero = cv2.findNonZero(pipe_mask)
+
+        x_min = nonzero[:, 0].min()
+        x_max = nonzero[:, 0].max()
+        y_min = nonzero[:, 1].min()
+        y_max = nonzero[:, 1].max()
+
+        # cv2.drawMarker(gray, (x_min, y_min), 100)
+        # cv2.drawMarker(gray, (x_max, y_max), 100)
+
+
+        relevant_frame = gray[y_min:y_max, x_min:x_max]
+        cv2.imshow("Gray pipe", relevant_frame)
+
+        some_point = (30, 10)
+
+        # cv2.imwrite(figure_dir / "image.png", relevant_frame)
+
+
+        # Detect horizontal edges (Sobel X)
+        # sobel = cv2.Sobel(src=gray, ddepth=cv2.CV_64F, dx=3, dy=3, ksize=7)
+
+        # # Detect vertical edges (Sobel Y)
+        # sobely = cv2.Sobel(src=gray, ddepth=cv2.CV_64F, dx=0, dy=1, ksize=3)
+        # edge_x = cv2.convertScaleAbs(sobelx)
+        # edges = cv2.convertScaleAbs(sobel)
+        print(f"{i}", end="\r")
+        
+        # cv2.imshow("Edges", edges)
+        # cv2.imshow("Edges y", edge_y)
+
+        # n_under = under_mask[i//10,:].sum()
+        # n_above = above_mask[i//10,:].sum()
+        # under_history.append(n_under)
+        # above_history.append(n_above)
+        # fig, ax=plt.subplots()
+        # ax.plot(under_history)
+        # ax.plot(above_history)
+        # fig.savefig(figure_dir / "history.png")
+        # # print(f"{n_under = }")
+        # # print(f"{n_above = }")
+        # plt.close("all")
+
+        i += 1
+
+        key = cv2.waitKey(1)
+
+        # quit
+        if key == ord("q"):
+            break
+
+        # pause
+        elif key == ord(" "):
+            new_key = cv2.waitKey(0)
+            if new_key == ord(" "):
+                continue
+        elif key == ord("s"):
+            i = int(input("new frame: "))
+            set_frame(cap, i)
+
+
+        if i == end:
+            break
+
+    cv2.destroyAllWindows()
+
+
 
     return 
-    # load the video
-    red = cv2.VideoCapture(reduced_video_dir / video_filename)
-    # load the mask
-    ret, frame = red.read()
-    if not ret:
-        print("Error loading video")
-    polygon = reduced_frame_polygon(frame)
-    red_mask = create_mask(polygon, frame.shape)
+    cap_mask = mask_creation.get_mask(cap, "yellow_black", plot_mask=True, figure_dir=figure_dir)
+    pipe_mask = mask_creation.get_mask(cap, "pipe", plot_mask=True, figure_dir=figure_dir)
 
-    try:
-        HSV = np.load(scan_output_dir / "HSV.npy")
-        RGB = np.load(scan_output_dir / "RGB.npy")
-    except Exception:
-        HSV, RGB = get_video_frame_averaged_HSV(red, red_mask, normalize=False)
-        np.save(scan_output_dir / "HSV.npy", HSV)
-        np.save(scan_output_dir / "RGB.npy", RGB)
+    # HSV, _ = get_video_frame_FULL_HSV(cap, cap_mask, False, skip=1)
+    # np.save(scan_output_dir / "HSV_pipe_cap_light.npy", HSV[::10])
+    # print(f"{HSV.shape = }")
+    
+    # try:
+    #     HSV = np.load(scan_output_dir / "HSV.npy")
+    #     RGB = np.load(scan_output_dir / "RGB.npy")
+    # except Exception:
+    HSV, RGB = get_video_frame_averaged_HSV(cap, cap_mask, normalize=False)
+    np.save(scan_output_dir / "HSV.npy", HSV)
+    np.save(scan_output_dir / "RGB.npy", RGB)
 
-    skip = 1000
+    skip = 10
     center = 50
     half_width = center - 0.05
     thresholds = np.linspace(center-half_width, center+half_width, 10000)
@@ -177,6 +255,4 @@ def main()->None:
     #         set_frame(red, i)
 
     # cv2.destroyAllWindows()
-
-
 main()

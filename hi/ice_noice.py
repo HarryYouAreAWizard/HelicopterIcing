@@ -2,7 +2,7 @@
 
 
 import cv2
-from video import get_num_frames, filter_frame, normalize_brightness
+from video import get_num_frames, filter_frame, normalize_brightness, extract_pixels_in_mask
 import numpy as np
 
 from sklearn.cluster import k_means
@@ -106,6 +106,55 @@ def silhouette_score_from_mean_HSVs(X, iceness, thresholds, skip=1000):
         silhouette_scores[i] = silhouette_score(X, labels)
 
     return silhouette_scores
+
+
+def get_video_frame_FULL_HSV(videocapture:cv2.VideoCapture, frame_mask:np.ndarray, normalize=False, end_idx=None, skip=None):
+    """
+     
+    """
+    n_frames = get_num_frames(videocapture) // skip
+    n_pixels = frame_mask.sum() // skip
+    HSV = np.empty((n_frames, n_pixels, 3))
+    RGB = np.empty_like(HSV)
+
+    i = 0
+    while videocapture.isOpened():
+
+        ret, frame = videocapture.read()
+        if not ret: break
+
+        frame = filter_frame(frame, frame_mask)
+        
+        if normalize:
+            frame = normalize_brightness(frame, frame_mask)
+
+        rgb  = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        hsv  = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        rgb = extract_pixels_in_mask(rgb, frame_mask)
+        hsv = extract_pixels_in_mask(hsv, frame_mask)
+
+        HSV[i, :, :] = hsv[::skip]#[:-1]
+        RGB[i, :, :] = rgb[::skip]#[:-1]
+
+
+        if i == n_frames - 1:
+            break
+
+        i += 1
+
+        if i%100 == 0:
+            print(f"{i} / {n_frames}")
+
+        if skip is not None and skip > 1:
+            for _ in range(skip-1):
+                videocapture.grab()
+
+        if end_idx is not None and i == end_idx:
+            break
+
+    return HSV, RGB
+
 
 
 
