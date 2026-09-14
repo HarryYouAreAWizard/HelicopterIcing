@@ -12,7 +12,8 @@ hi/casevideos*/
 hi/scan_output*/
 hi/reduced_video_data*/
 hi/segnet_output*/
-
+hi/model_weights*/
+hi/label_data*/
 
 Dockerfile
 get-docker.sh

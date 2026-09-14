@@ -16,6 +16,8 @@ import mask_creation
 import video
 from ice_noice import get_video_frame_averaged_HSV, get_video_frame_FULL_HSV, silhouette_score_from_mean_HSVs 
 
+from pynput import mouse
+
 figure_dir          = Path(os.getcwd()) / "figures"
 data_dir            = Path(os.getcwd()) / "video-data"
 polygon_dir         = Path(os.getcwd()) / "polygons"
@@ -54,6 +56,16 @@ def run_silhouette_score(skip):
 
     return thresholds, silhouette_scores
 
+def on_click(x, y, button, pressed, storage):
+    action = "Pressed" if pressed else "Released"
+    # print(f"Button {button} {action} at ({x}, {y})")
+    if button == mouse.Button.left and pressed:
+        storage.append((x,y))
+
+    # stop on right button 
+    if button == mouse.Button.right and not pressed:
+        print("Stopping listener...")
+        return False
 
 
 def main()->None:
@@ -61,7 +73,12 @@ def main()->None:
     cap = cv2.VideoCapture(data_dir / video_filename)
     pipe_mask = mask_creation.get_mask(cap, "pipe_small", plot_mask=True, figure_dir=figure_dir)
 
-   
+    storage = []
+    listener = mouse.Listener(
+        on_click=on_click
+    )
+    listener.start()
+    listener.join()
     start = 10000
     end = 40000
     i = start
@@ -90,11 +107,15 @@ def main()->None:
 
 
         relevant_frame = gray[y_min:y_max, x_min:x_max]
-        cv2.imshow("Gray pipe", relevant_frame)
+        # cv2.imshow("Gray pipe", relevant_frame)
 
-        some_point = (30, 10)
-
-        # cv2.imwrite(figure_dir / "image.png", relevant_frame)
+        point1 = (45, 25)
+        point2 = (80, 20)
+        cv2.drawMarker(relevant_frame, point1, 1000)
+        cv2.drawMarker(relevant_frame, point2, 1000)
+        cv2.imwrite(figure_dir / "image.png", relevant_frame)
+        return
+    
 
 
         # Detect horizontal edges (Sobel X)
