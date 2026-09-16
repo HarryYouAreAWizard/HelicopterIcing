@@ -10,7 +10,8 @@ spec:
         image: "tensorflow/tensorflow:1.13.1-gpu-py3" # I will just keep the same image
         # workingDir: $HOME/HelicopterIcing/k8helloworld
         workingDir: /storage
-        command: ["sh", "k8helloworld/helloworld.sh"]
+        command: ["pwd"]
+        # command: ["sh", "k8helloworld/helloworld.sh"]
         volumeMounts:
         - name: helloworld
           mountPath: /storage

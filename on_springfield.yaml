@@ -8,12 +8,14 @@ spec:
       containers:
       - name: helicoptericing
         # image: "test-get-masked-image"
-        # image: python:3.11-slim
+        image: python:3.11-slim
         # image: pytorch/pytorch
-        image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+        # image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
         workingDir: /storage
-        # command: ["ls"]
-        command: ["sh", "instructions.sh"]
+        # workingDir: ~/
+        command: ["ls"]
+        # command: ["sh", "instructions.sh"]
+        # command: ["pwd"]
         volumeMounts:
         - name: storage
           mountPath: /storage

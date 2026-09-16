@@ -17,4 +17,6 @@ echo
 echo 
 echo 
 echo Running the project
+
 python3 main.py
+
