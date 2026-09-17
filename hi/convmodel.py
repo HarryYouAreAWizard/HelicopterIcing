@@ -411,7 +411,7 @@ def prepare_and_split_data(data, batch_size)->tuple:
         generator=torch.Generator().manual_seed(42)
     )
 
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=batch_size)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=batch_size)
 
@@ -454,7 +454,7 @@ def plot_test(model, data, test_idx):
     cv2.imwrite(figure_dir / "image.png", frame_drawable)
 
 
-def train(model_entries, data, batch_size=10, epochs=2):
+def train(model_entries, data, batch_size=10, epochs=2, ignore_scheduler=False):
     # unpack the model entries
     model, loss_func, optimizer, scheduler = model_entries
 
@@ -498,7 +498,8 @@ def train(model_entries, data, batch_size=10, epochs=2):
                 predictions = model(frames)
                 validation_loss = loss = loss_func(predictions, labels)
                 model.validation_losses.append(validation_loss.detach().numpy())
-                scheduler.step(validation_loss)
+                if not ignore_scheduler:
+                    scheduler.step(validation_loss)
 
                 # in the case where the best validation errors are archived, we save the model parameters
                 if validation_loss == np.min(model.validation_losses):

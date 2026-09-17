@@ -10,8 +10,8 @@ import os
 
 from pathlib import Path
 
-# import convmodel
-# import volumeestimation
+import convmodel
+import volumeestimation
 # import mask_creation
 # import ice_noice
 figure_dir          = Path(os.getcwd()) / "figures"
@@ -34,25 +34,23 @@ video_filename = "Video_Test_F2787_125743_01_VIDCKPT_sec.mpg"
 
 def main()->None:
 
-    apparent_thicknesses = np.load(volume_dir / "apparent pixel thickness.npy")
-
-    from scipy.signal import butter
-    filtered = butter
-
-
     fig, ax=plt.subplots()
+    apparent_thicknesses = np.load(volume_dir / "apparent pixel thickness.npy")
     ax.plot(apparent_thicknesses)
+
+    from scipy.ndimage import uniform_filter
+
+    filtered = uniform_filter(apparent_thicknesses, size=len(apparent_thicknesses)//100)
+    ax.plot(filtered)
+
+    ax.legend()
+    
     fig.savefig(figure_dir / f"Observed pixel thickness {video_filename}.png")
 
 
-    return
     print(f"loading model...")
-    model_entries = convmodel.load_model(load_weights="best")
+    model_entries = convmodel.load_model(load_weights=True)
     model, loss_func, optimizer, scheduler = model_entries
-    if model.mean is None:
-        model.mean = np.zeros(2, dtype=np.float32)
-        model.std  = np.ones(2, dtype=np.float32)
-
 
     print(f"loading data...")
     data = convmodel.load_data_with_labels()
@@ -61,13 +59,14 @@ def main()->None:
     convmodel.train(
         model_entries=model_entries,
         data=data,
-        batch_size=20,
-        epochs=25
+        batch_size=25,
+        epochs=100,
+        ignore_scheduler=True
     )
 
     print(f"Testing live...")
     convmodel.livestream_test(model, 8000)
-
+    return
     print(f"Running inference on video")
     apparent_thicknesses = volumeestimation.run_apparent_thickness(videocapture=video_filename, model=model)
     np.save(volume_dir / "apparent pixel thickness.npy", apparent_thicknesses)
