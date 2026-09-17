@@ -4,15 +4,16 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
+# import cv2
 import os
-import torch
+# import torch
 
 from pathlib import Path
 
-import convmodel
-import mask_creation
-import ice_noice
+# import convmodel
+# import volumeestimation
+# import mask_creation
+# import ice_noice
 figure_dir          = Path(os.getcwd()) / "figures"
 data_dir            = Path(os.getcwd()) / "video-data"
 polygon_dir         = Path(os.getcwd()) / "polygons"
@@ -22,6 +23,7 @@ scan_output_dir     = Path(os.getcwd()) / "scan_output"
 # reduced_video_dir   = Path(os.getcwd()) / "reduced_video_data"
 label_data_dir      = Path(os.getcwd()) / "label_data"
 model_weights_dir   = Path(os.getcwd()) / "model_weights"
+volume_dir          = Path(os.getcwd()) / "volume"
 
 
 video_filename = "Video_Test_F2787_125743_01_VIDCKPT_sec.mpg"
@@ -32,18 +34,28 @@ video_filename = "Video_Test_F2787_125743_01_VIDCKPT_sec.mpg"
 
 def main()->None:
 
-    print(f"loading model...")
-    model_entries = convmodel.load_model(load_weights=False)
-    model, loss_func, optimizer, scheduler = model_entries
-    model.mean = np.float32(0.0)
-    model.std = np.float32(1.0)
+    apparent_thicknesses = np.load(volume_dir / "apparent pixel thickness.npy")
 
-    convmodel.livestream_test(model, 0)
+    from scipy.signal import butter
+    filtered = butter
+
+
+    fig, ax=plt.subplots()
+    ax.plot(apparent_thicknesses)
+    fig.savefig(figure_dir / f"Observed pixel thickness {video_filename}.png")
+
+
     return
+    print(f"loading model...")
+    model_entries = convmodel.load_model(load_weights="best")
+    model, loss_func, optimizer, scheduler = model_entries
+    if model.mean is None:
+        model.mean = np.zeros(2, dtype=np.float32)
+        model.std  = np.ones(2, dtype=np.float32)
+
 
     print(f"loading data...")
     data = convmodel.load_data_with_labels()
-
 
     print(f"starting training...")
     convmodel.train(
@@ -52,5 +64,15 @@ def main()->None:
         batch_size=20,
         epochs=25
     )
+
+    print(f"Testing live...")
+    convmodel.livestream_test(model, 8000)
+
+    print(f"Running inference on video")
+    apparent_thicknesses = volumeestimation.run_apparent_thickness(videocapture=video_filename, model=model)
+    np.save(volume_dir / "apparent pixel thickness.npy", apparent_thicknesses)
+
+    
+
 
 main()

@@ -38,7 +38,7 @@ class Linefinder(nn.Module):
             nn.GroupNorm(4, 16),   # similar to batch size, but normalizes over groups of channels instead of the batch
             nn.SiLU(),  # x*sigmoid(x)
 
-            # -> [B, 16, 24, 26]
+            # -> [B, 16, 24, 26] (half widtha and height)
             nn.MaxPool2d(kernel_size=2),
 
             # -> [B, 32, 24, 26]
@@ -297,13 +297,22 @@ class MarkedFrames(torch.utils.data.Dataset):
         points = np.array(points, dtype=np.uint8)
         return points
 
-class PureVideo:
-    def __init__(self, video_filename):
-        self.data = cv2.VideoCapture(data_dir / video_filename)
-        self.data.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        self.pipe_mask = mask_creation.get_mask(self.data, "pipe_small")
+class MaskedVideo(torch.utils.data.Dataset):
+    def __init__(self, video, mask="pipe_small"):
+        if isinstance(video, str):
+            self.video_filename = video
+            self.videocapture = cv2.VideoCapture(data_dir / video_filename)
+        elif isinstance(video, cv2.VideoCapture):
+            self.videocapture = video
+        
+        self.videocapture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        if isinstance(mask, str):
+            self.mask = mask_creation.get_mask(self.videocapture, mask)
 
-        self.nonzero = cv2.findNonZero(self.pipe_mask).reshape((-1, 2))
+        elif isinstance(mask, np.ndarray):
+            self.mask = mask
+
+        self.nonzero = cv2.findNonZero(self.mask).reshape((-1, 2))
         self.x_min = self.nonzero[:, 0].min()
         self.x_max = self.nonzero[:, 0].max()
         self.y_min = self.nonzero[:, 1].min()
@@ -311,25 +320,34 @@ class PureVideo:
 
         self.previous_index = None
 
+    def __len__(self):
+        total_frames = int(self.videocapture.get(cv2.CAP_PROP_FRAME_COUNT))
+        return total_frames
+
     def __getitem__(self, index):
-        # Seek for the first frame or non-sequential access.
-        if self.previous_index is None or index != self.previous_index + 1:
-            self.data.set(cv2.CAP_PROP_POS_FRAMES, index)
+        frame_raw = self.get_raw_frame(index)
 
-        self.previous_index = index
-
-        ret, frame_raw = self.data.read()
-        if not ret:
-            return
-        
-        frame = frame_raw * self.pipe_mask[:, :, None]
+        frame = frame_raw * self.mask[:, :, None]
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         frame = gray[self.y_min:self.y_max, self.x_min:self.x_max]
 
         frame = prep_for_torch(frame)
+        
+        return frame
 
-        return frame, frame_raw
+    def get_raw_frame(self, index):
+        # Seek for the first frame or non-sequential access.
+        if self.previous_index is None or index != self.previous_index + 1:
+            self.videocapture.set(cv2.CAP_PROP_POS_FRAMES, index)
+
+        self.previous_index = index
+
+        ret, frame_raw = self.videocapture.read()
+        if not ret: 
+            return
+
+        return frame_raw
 
  
 def prep_for_torch(frame):
@@ -512,55 +530,40 @@ def train(model_entries, data, batch_size=10, epochs=2):
     plt.close()
 
 
-def calculate_base_slope_bias(data):
-    frame, frame_raw = data[0]
 
-    frame = frame[0, :, :].numpy()
-    # frame.shape = [1 48, 52] = [C, H, W]
-    xmin = 0
-    ymin = 0
-    xmax = frame.shape[1] - 1
-    ymax = frame.shape[0] - 1
-
-    list_of_xs_ys_where_nonzero = cv2.findNonZero(frame)
-
-    x_left,   y_left    = list_of_xs_ys_where_nonzero[list_of_xs_ys_where_nonzero[:, 0] == xmin][-1]
-    x_top,    y_top     = list_of_xs_ys_where_nonzero[list_of_xs_ys_where_nonzero[:, 1] == ymin][-1]
-    x_right,  y_right   = list_of_xs_ys_where_nonzero[list_of_xs_ys_where_nonzero[:, 0] == xmax][-1]
-    x_bottom, y_bottom  = list_of_xs_ys_where_nonzero[list_of_xs_ys_where_nonzero[:, 1] == ymax][-1]
-    # print(f"left: {x_left, y_left}")
-    # print(f"top: {x_top, y_top}")
-    # print(f"right: {x_right, y_right}")
-    # print(f"bottom: {x_bottom, y_bottom}")
-
-    base_slope = (y_right - y_bottom) / (x_right - x_bottom)
-    base_bias = (y_right - base_slope * x_right)
-
-    return (
-        base_slope, 
-        base_bias,
-        (
-            (x_left,   y_left),
-            (x_top,    y_top),
-            (x_right,  y_right),
-            (x_bottom, y_bottom),
-        )
-    )
 
 def livestream_test(model, start):
-
-    data = PureVideo(video_filename)
-
+    import volumeestimation
+    data = MaskedVideo(video_filename)
     model.eval()
     show_gray = False
 
-    base_slope, base_bias, corners = calculate_base_slope_bias(data)
+    frame = data[0]
+    # frame.shape = [1, 48, 52] = [C, H, W] -> [H, W]
+    frame = frame[0, :, :].numpy()
+
+    pipe_corners = volumeestimation.get_pipe_params(frame)
+    
+    thickness_history = []
 
     xs = np.linspace(0, 50, 100)
     i = start
-    while data.data.isOpened():
-        frame, frame_raw = data[i]
+    # set the frame internally in the datastructure
+    data[i]
+    while data.videocapture.isOpened():
+        ret, frame_raw = data.videocapture.read()
+        if not ret:
+            break
 
+        # cursed manual implementation to ensure MaskedVideo stays useful for torch
+        frame = frame_raw * data.mask[:, :, None]
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        frame = gray[data.y_min:data.y_max, data.x_min:data.x_max]
+
+        frame = prep_for_torch(frame)
+
+    
         frame = frame.unsqueeze(0) # add batch dimension
 
         frame_drawable = unprep_from_torch(frame).squeeze(0)
@@ -570,31 +573,37 @@ def livestream_test(model, start):
 
         slope, bias = predictions[0].detach().numpy()
         ys = slope * xs + bias
-        point1 = (np.uint8(xs[0]),  np.uint8(ys[0]))
-        point2 = (np.uint8(xs[-1]), np.uint8(ys[-1]))
-        # cv2.line(frame_drawable, point1, point2, 10000, 1)
+        prediction_point1 = (np.int32(xs[0]),  np.int32(ys[0]))
+        prediction_point2 = (np.int32(xs[-1]), np.int32(ys[-1]))
+        cv2.line(frame_drawable, prediction_point1, prediction_point2, 10000, 1)
         if show_gray:
             frame_raw = cv2.cvtColor(frame_raw, cv2.COLOR_BGR2GRAY)
 
-        ys = base_slope * xs + base_bias
-        point1 = (np.uint8(xs[0]),  np.uint8(ys[0]))
-        point2 = (np.uint8(xs[-1]), np.uint8(ys[-1]))
-        cv2.line(frame_drawable, point1, point2, 10000, 1)
+        apparent_pixel_thickness, intersections = volumeestimation.calculate_pixel_apparent_thickness(
+            pipe_corners, 
+            prediction=predictions[0].detach().numpy()
+        )
+
+        for intersection in intersections.values():
+            cv2.drawMarker(frame_drawable, intersection, 10000)
+        
+        thickness_history.append(apparent_pixel_thickness)
+        if i%100==0:
+            plt.plot(range(start, i+1), thickness_history, c="k")
+            plt.xlabel("Index")
+            plt.ylabel("Thickness [pixels]")
+            plt.title("Apparent pixel thickness")
+            plt.savefig(figure_dir / "apparent pixel thickness.png")
+            plt.close("all")
+
+
+        i += 1
 
 
         cv2.imshow("Original", frame_raw)
         cv2.imshow("Pipe", frame_drawable)
 
-        print(f""
-              + f"slope:       {slope:.3}, "
-              + f"bias:        {bias:.3}, "
-              + f"base_slope:  {base_slope:.3}, "
-              + f"base_bias:   {base_bias:.3}, "
-              , end="\r")
 
-
-
-        i += 1
         key = cv2.waitKey(1)
         if key == ord("q"):
             break
